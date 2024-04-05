@@ -33,7 +33,7 @@ def on_publish(client, userdata, mid, properties=None):
         :param mid: variable returned from the corresponding publish() call, to allow outgoing messages to be tracked
         :param properties: can be used in MQTTv5, but is optional
     """
-    print("mid: " + str(mid))
+    # print("mid: " + str(mid))
 
 
 # print which topic was subscribed to
@@ -184,7 +184,7 @@ dispatch = {
 
 
 if __name__ == '__main__':
-    load_dotenv(dotenv_path='./credentials.env')
+    load_dotenv(dotenv_path='credentials.env')
     
     broker_address = os.environ.get('BROKER_ADDRESS')
     broker_port = int(os.environ.get('BROKER_PORT'))
