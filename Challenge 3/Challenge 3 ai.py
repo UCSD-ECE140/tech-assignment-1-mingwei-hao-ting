@@ -3,12 +3,14 @@ import random
 import paho.mqtt.client as paho
 from paho import mqtt
 import json
+from algo import *
 
 lobby_name = "mylobby"
 team_name = "myteam"
-player_name = "player"
+player_name = "****"
 moves = {"r" : "RIGHT", "l" : "LEFT", "u" : "UP", "d" : "DOWN"}
-gamedata = {}
+newMove = False
+curMoves = []
 
 # setting callbacks for different events to see if it works, print the message etc.
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -24,12 +26,16 @@ def on_subscribe(client, userdata, mid, granted_qos, properties=None):
 
 # print message, useful for checking if it was successful
 def on_message(client, userdata, msg):
-    global gamedata
-    global currentTurn
-    print("Message: " + msg.topic + " " + str(msg.payload))
-    if (msg.topic == "games/mylobby/player/game_state"):
+    global curMoves, newMove
+    # print("Message: " + msg.topic + " " + str(msg.payload))
+    if (msg.topic == f"games/{lobby_name}/{player_name}/game_state" and newMove == False): # Returns the game state here, here is probably where we want to write our algo
         gamedata = json.loads(msg.payload.decode('utf-8'))
-        print(gamedata)
+        # for data in gamedata:
+        #   print(data)
+        # print(gamedata)
+        curMoves = bfs(gamedata) # Call our algorithm here
+        newMove = True
+
     
 client = paho.Client(callback_api_version=paho.CallbackAPIVersion.VERSION1, client_id="", userdata=None, protocol=paho.MQTTv5)
 client.on_connect = on_connect
@@ -41,21 +47,26 @@ client.connect("9b6f4baa8bcb4748813d9252223d7399.s1.eu.hivemq.cloud", 8883)
 # setting callbacks, use separate functions like above for better visibility
 client.on_subscribe = on_subscribe
 client.on_message = on_message
-client.on_publish = on_publish
+# client.on_publish = on_publish # dont really care about this 
 
-# subscribe to game info
-client.subscribe("games/mylobby/lobby", qos=1)
+client.subscribe("games/mylobby/lobby", qos=1) # subscribe to game info
 
 client.publish("new_game", payload=f'{{"lobby_name": "{lobby_name}", "team_name": "{team_name}", "player_name": "{player_name}"}}', qos=1)
 client.subscribe(f"games/{lobby_name}/{player_name}/game_state", qos=1)
 
 input("Press any key to start the game!")
+time.sleep(0.1)
 client.publish(f"games/{lobby_name}/start", payload="START", qos=1)
 
 while (1):
-  for i in range(5):
-    client.loop() 
-    time.sleep(0.1)
-  move = input("Which way do you want to move?")
-  client.publish(f"games/{lobby_name}/{player_name}/move", payload= moves[move], qos=1)
+  client.loop()
+  
+  if (newMove == True):
+    print(f" Moves returned from BFS: {curMoves}")
+    for move in curMoves:
+      time.sleep(1)
+      client.publish(f"games/{lobby_name}/{player_name}/move", payload= moves[move], qos=1)
+      print(f"Move sent : {move}")
+    client.loop()
+    newMove = False
     
